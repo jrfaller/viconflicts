@@ -1,0 +1,24 @@
+#!/usr/bin/env ruby
+# encoding: utf-8
+#
+# Copyright 2016 Jean-Remy Falleri <jr.falleri@gmail.com>
+
+require 'sinatra'
+
+set :root, File.dirname(File.realpath(__FILE__))
+
+get '/' do
+  slim :home, locals: { sources: Dir['*'] }
+end
+
+get '/sources/:id' do |id|
+  slim :conflicts, locals: { conflicts: Dir["#{id}/**/*.diff3"], src: id }
+end
+
+get '/conflicts' do
+  src = params[:source]
+  commit = params[:commit]
+  file = params[:file]
+  `meld --auto-merge "#{src}/#{commit}/l/#{file}" "#{src}/#{commit}/b/#{file}" "#{src}/#{commit}/r/#{file}"`
+  slim :back, locals: { src: src }
+end

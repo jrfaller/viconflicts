@@ -1,0 +1,12 @@
+doctype html
+html
+  head
+    title = title
+  body
+    == yield
+    hr
+    h3 Kill
+    ul
+      - pids.each do |res, pid|
+        li
+          a href="/#{src if defined? src}?close=#{pid}" =res

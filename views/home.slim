@@ -1,10 +1,5 @@
-doctype html
-html
-  head
-    title Home
-  body
-    h1 All sources
-    ul
-      - for src in sources
-        li
-          a href="/sources/#{src}" #{src}
+h1 All sources
+ul
+  - for src in sources
+    li
+      a href="/#{src}" #{src}

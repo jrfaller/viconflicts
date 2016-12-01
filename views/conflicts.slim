@@ -1,10 +1,6 @@
-doctype html
-html
-  head
-    title Conflicts
-  body
-    h1 Conflicts for #{src}
-    ul
-      - for cfl in conflicts
-        li
-          a href="/conflicts?source=#{src}&commit=#{File.basename(File.dirname(cfl))}&file=#{File.basename(cfl, ".diff3")}" #{File.basename(File.dirname(cfl))}/#{File.basename(cfl)}
+h1 Conflicts for #{src}
+a href='/' back
+ul
+  - for conflict in conflicts
+    li
+      a href="/#{src}/#{conflict[0]}/#{conflict[1]}" #{conflict[0]}/#{conflict[1]}

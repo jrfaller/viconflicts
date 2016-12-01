@@ -4,3 +4,7 @@
 
 source 'https://rubygems.org'
 gemspec
+
+if RUBY_PLATFORM=~ /win32/ 
+     gem "win32-process", platform: 
+end

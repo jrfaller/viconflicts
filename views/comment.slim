@@ -1,0 +1,10 @@
+h1 #{file} (#{commit})
+form method="post"
+  - (File.readlines(log) rescue []).each do |line|
+    p
+      = line
+  textarea name='comment'
+  br
+  input type='hidden' name='close' value=pid
+  input type='submit'
+a href="/#{src}?close=#{pid}" Cancel

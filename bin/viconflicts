@@ -3,22 +3,78 @@
 #
 # Copyright 2016 Jean-Remy Falleri <jr.falleri@gmail.com>
 
-require 'sinatra'
+PIDS = {}
+MELD = ENV.fetch("MELD", "meld")
+PREFIX = ARGV.empty? ? "." : ARGV[0]
 
-set :root, File.dirname(File.realpath(__FILE__))
+at_exit do
+  PIDS.values.each { |pid| Process.kill("TERM", pid) }
+end
+
+require 'sinatra'
+require 'etc'
+
+set :root, File.dirname(File.dirname(File.realpath(__FILE__)))
+
+before do
+  if params[:close] then
+    begin
+      Process.kill("TERM", params[:close].to_i)
+      sleep 1
+    rescue
+    ensure
+      PIDS.delete params[:close]
+    end
+  end
+  PIDS.reject! do |file, pid|
+    begin
+      Process.getpgid( pid )
+      false
+    rescue Errno::ESRCH
+      true
+    end
+  end
+end
+
+def render_view name, locals={}
+  slim name, layout: :default,
+    locals: {pids: PIDS, title: name.to_s.capitalize}.merge!(locals)
+end
 
 get '/' do
-  slim :home, locals: { sources: Dir['*'] }
+  render_view :home, sources: Dir[File.join(PREFIX, '*')].map{ |dir| File.basename(dir) }
 end
 
-get '/sources/:id' do |id|
-  slim :conflicts, locals: { conflicts: Dir["#{id}/**/*.diff3"], src: id }
+get '/:src/?' do |src|
+  render_view :conflicts, src: src,
+    conflicts: Dir[File.join(PREFIX, src, "**", "*.diff3")].map { |file| [
+      File.basename(File.dirname(file)),
+      File.basename(file, ".diff3")
+    ]}
 end
 
-get '/conflicts' do
-  src = params[:source]
-  commit = params[:commit]
-  file = params[:file]
-  `meld --auto-merge "#{src}/#{commit}/l/#{file}" "#{src}/#{commit}/b/#{file}" "#{src}/#{commit}/r/#{file}"`
-  slim :back, locals: { src: src }
+post '/:src/:commit/:file' do |src, commit, file|
+  log = File.join(PREFIX, src, commit, "#{File.basename(file, ".xml")}.log")
+  File.open(log, "a") do |f|
+    f.write "#{Etc.getlogin}: #{params[:comment]}\n"
+  end unless params.fetch("comment", "").empty?
+  redirect "#{src}"
+end
+
+get '/:source/:commit/:file' do |src, commit, file|
+  ressource = File.join(src, commit, File.basename(file, ".xml"))
+  log = File.join(PREFIX, "#{ressource}.log")
+  unless PIDS[ressource] then
+    pid = spawn(
+      [
+        MELD, "--auto-merge",
+        "'#{File.join(PREFIX, src, commit, "l", file)}'",
+        "'#{File.join(PREFIX, src, commit, "b", file)}'",
+        "'#{File.join(PREFIX, src, commit, "r", file)}'"
+      ].join(" "),
+      err: [File.join(PREFIX, "..", "meld.log"), "a"])
+    PIDS[ressource] = pid
+  end
+
+  render_view :comment, src: src, commit: commit, file: file, pid: pid, log: log
 end
